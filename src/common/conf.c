@@ -3,11 +3,8 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <stdbool.h>
 #include <assert.h>
-#include <stdio.h>
-#include <inttypes.h>
 
 static int parseLine(int, char*, char**, char**);
 
@@ -27,7 +24,7 @@ messages.error.10 = "%m"
 int parseAgent(const char* config, agent_t* agent) {
 	char* copy = malloc(strlen(config) + 1);
 	if (copy == NULL) {
-		error = strerror(errno);
+		libfail();
 		return -1;
 	}
 
@@ -66,7 +63,8 @@ int parseAgent(const char* config, agent_t* agent) {
 				else if (strcmp(value, "string") == 0)
 					agent->type = STRING;
 				else {
-					// TODO error
+					fail("Unknown data type '%s' (line %d).", value, line);
+					return -1;
 				}
 			} else if (strcmp("data", key) == 0) {
 				if (strcmp(value, "none") == 0)
@@ -78,20 +76,22 @@ int parseAgent(const char* config, agent_t* agent) {
 				else if (strcmp(value, "property") == 0)
 					agent->data = PROPERTY;
 				else {
-					printf("\n%s is an unknown value.\n", value);
-					// TODO error
+					fail("Unknown message type '%s' (line %d).", value, line);
+					return -1;
 				}
 			} else if (strcmp("timing", key) == 0) {
 				if (strcmp(value, "interval") == 0)
 					agent->timing.type = Interval;
 				else {
-					// TODO error
+					fail("Unknown timing type '%s' (line %d).", value, line);
+					return -1;
 				}
 			} else if (strcmp("timing.value", key) == 0) {
 				char* tmp;
 				agent->timing.value = strtol(value, &tmp, 10);
 				if (*tmp != '\0') {
-					// TODO error
+					fail("Timing value has to be a number (line %d).", line);
+					return -1;
 				}
 			} else if (strstr(key, "messages") == key) {
 				char* tmp;
@@ -102,19 +102,29 @@ int parseAgent(const char* config, agent_t* agent) {
 						break;
 					parts[index++] = tmp;
 				}
-				if (tmp != NULL || index != 3 || (strcmp(parts[0], "messages") != 0)) {
-					// TODO error
+				if (tmp != NULL) {
+						fail("Too many key components (line %d).", line);
+						return -1;
+				}
+				if (index != 3) {
+						fail("Too few key components (line %d).", line);
+						return -1;
+				}
+				if (strcmp(parts[0], "messages") != 0) {
+					fail("Unknown key '%s' (line %d).", parts[0], line);
+					return -1;
 				}
 				int code = strtol(parts[2], &tmp, 10);
 				if (*tmp != '\0') {
-					// TODO error
+					fail("Message code has to be a number (line %d).", line);
+					return -1;
 				}
 				if (code < 0 || code > 255) {
-					// TODO error
+					fail("Message code musst be in the range of 0-255 (line %d).", line);
+					return -1;
 				}
 				agent->messages[code].text = value;
 
-				// meta is no message class
 				if (strcmp(parts[1], "info") == 0)
 					agent->messages[code].class = INFO;
 				else if (strcmp(parts[1], "warning") == 0)
@@ -125,8 +135,12 @@ int parseAgent(const char* config, agent_t* agent) {
 					agent->messages[code].class = ERROR;
 				else if (strcmp(parts[1], "emergency") == 0)
 					agent->messages[code].class = EMERGENCY;
-				else {
-					// TODO error
+				else if (strcmp(parts[1], "meta") == 0){
+					fail("Message class meta can not be set by the agent (line %d).", line);
+					return -1;
+				} else {
+					fail("Unknown message class '%s' (line %d).", parts[1], line);
+					return -1;
 				}
 			}
 
@@ -136,14 +150,6 @@ int parseAgent(const char* config, agent_t* agent) {
 }
 
 int parseLine(int linenr, char* string, char** key, char** value) {
-	#define MAX_ERROR_LENGTH 1024
-	static char* errmsg = NULL;
-	if (errmsg == NULL)
-		errmsg = malloc(MAX_ERROR_LENGTH);
-	if (errmsg == NULL) {
-		error = strerror(errno);
-		return -1;
-	}
 	#define INIT 0
 	#define KEY_START_FOUND 1
 	#define KEY_STOP_FOUND 2
@@ -185,11 +191,7 @@ int parseLine(int linenr, char* string, char** key, char** value) {
 				case SEPERATOR_FOUND:
 				case VALUE_START_FOUND:
 				case VALUE_STOP_FOUND:
-					if (snprintf(errmsg, MAX_ERROR_LENGTH, "Unexpected '=' on line %d:%lu.", linenr, i + 1) < 0) {
-						error = strerror(errno);
-						return -1;
-					}
-					error = errmsg;
+					fail("Unexpected '=' on line %d:%lu.", linenr, i + 1);
 					return -1;
 				case KEY_STOP_FOUND:
 					state = SEPERATOR_FOUND;
@@ -240,11 +242,7 @@ int parseLine(int linenr, char* string, char** key, char** value) {
 						break;
 					case KEY_STOP_FOUND:
 					case VALUE_STOP_FOUND:
-						if (snprintf(errmsg, MAX_ERROR_LENGTH, "Unexpected \" on line %d:%lu.", linenr, i + 1) < 0) {
-							error = strerror(errno);
-							return -1;
-						}
-						error = errmsg;
+						fail("Unexpected '\"' on line %d:%lu.", linenr, i + 1);
 						return -1;
 					case KEY_START_FOUND:
 					case VALUE_START_FOUND:
@@ -267,11 +265,7 @@ int parseLine(int linenr, char* string, char** key, char** value) {
 					break;
 				case KEY_STOP_FOUND:
 				case VALUE_STOP_FOUND:
-					if (snprintf(errmsg, MAX_ERROR_LENGTH, "Unexpected string on line %d:%lu.", linenr, i + 1) < 0) {
-						error = strerror(errno);
-						return -1;
-					}
-					error = errmsg;
+					fail("Unexpected string on line %d:%lu.", linenr, i + 1);
 					return -1;
 				default:
 					assert(false);
@@ -281,11 +275,7 @@ int parseLine(int linenr, char* string, char** key, char** value) {
 		willMasked = false;
 	}
 	if (isEnquoted) {
-		if (snprintf(errmsg, MAX_ERROR_LENGTH, "Missing \" on line %d.", linenr) < 0) {
-			error = strerror(errno);
-			return -1;
-		}
-		error = errmsg;
+		fail("Missing \" on line %d.", linenr);
 		return -1;
 	}
 	if (state == INIT) {
@@ -294,19 +284,11 @@ int parseLine(int linenr, char* string, char** key, char** value) {
 		return 1;
 	}
 	if (state == KEY_START_FOUND || state == KEY_STOP_FOUND) {
-		if (snprintf(errmsg, MAX_ERROR_LENGTH, "Missing = on line %d.", linenr) < 0) {
-			error = strerror(errno);
-			return -1;
-		}
-		error = errmsg;
+		fail("Missing = on line %d.", linenr);
 		return -1;
 	}
 	if (state == SEPERATOR_FOUND) {
-		if (snprintf(errmsg, MAX_ERROR_LENGTH, "Missing value on line %d.", linenr) < 0) {
-			error = strerror(errno);
-			return -1;
-		}
-		error = errmsg;
+		fail("Missing value on line %d.", linenr);
 		return -1;
 	}
 	if (state == VALUE_START_FOUND) {

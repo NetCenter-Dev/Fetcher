@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NUMBER_OF_TESTCASES 7
+#define NUMBER_OF_TESTCASES 15
 struct testcase {
 	const char* config;
 	int success;
@@ -125,12 +125,53 @@ bool configParser() {
 	testcases[6] = (struct testcase) {
 		.config = "name = = hi",
 		.success = -1,
-		.result = {.name = "hi"}
+		.result = {}
 	};
+	testcases[7] = (struct testcase) {
+		.config = "messages.warning.x = hi",
+		.success = -1,
+		.result = {}
+	};
+	testcases[8] = (struct testcase) {
+		.config = "name type = hi",
+		.success = -1,
+		.result = {}
+	};
+	testcases[9] = (struct testcase) {
+		.config = "name = hello world",
+		.success = -1,
+		.result = {}
+	};
+	testcases[10] = (struct testcase) {
+		.config = "type=error",
+		.success = -1,
+		.result = {}
+	};
+	testcases[11] = (struct testcase) {
+		.config = "timing.value=hi",
+		.success = -1,
+		.result = {}
+	};
+	testcases[12] = (struct testcase) {
+		.config = "messagesblabla.warning.1 = hi",
+		.success = -1,
+		.result = {}
+	};
+	testcases[13] = (struct testcase) {
+		.config = "messages.warning.300",
+		.success = -1,
+		.result = {}
+	};
+	testcases[14] = (struct testcase) {
+		.config = "messages.nothing.1",
+		.success = -1,
+		.result = {}
+	};
+
 
 	bool result = true;
 	for (int i = 0; i < NUMBER_OF_TESTCASES; i++) {
-		printf("Testcase %d... ", i);
+		printf("  Testcase %d... ", i);
 		agent_t agent;
 		memset(&agent, 0, sizeof(agent_t));
 		int tmp = parseAgent(testcases[i].config, &agent);
@@ -146,7 +187,7 @@ bool configParser() {
 			printf("okay.\n");
 		}
 		if (tmp != 0)
-			printf("Error: %s\n", error);
+			printf("    Error: %s\n", error);
 	}
 	return result;
 }
