@@ -171,7 +171,7 @@ bool configParser() {
 
 	bool result = true;
 	for (int i = 0; i < NUMBER_OF_TESTCASES; i++) {
-		printf("  Testcase %d... ", i);
+		printf("%sTestcase %d... ", SUBSPACING, i);
 		agent_t agent;
 		memset(&agent, 0, sizeof(agent_t));
 		int tmp = parseAgent(testcases[i].config, &agent);
@@ -187,7 +187,7 @@ bool configParser() {
 			printf("okay.\n");
 		}
 		if (tmp != 0)
-			printf("    Error: %s\n", error);
+			printf("%s%sError: %s\n", SUBSPACING, SUBSPACING, error);
 	}
 	return result;
 }

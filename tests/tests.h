@@ -3,6 +3,9 @@
 
 #include <stdbool.h>
 
+#define SUBSPACING "  "
+
 bool configParser(void);
+bool timer(void);
 
 #endif

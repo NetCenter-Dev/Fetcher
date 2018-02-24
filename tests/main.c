@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <conf.h>
+#include <error.h>
+#include <stdio.h>
 
 #include "tests.h"
 
@@ -14,8 +17,10 @@ void test(const char* name, bool (*f)()) {
 }
 
 int main(int argc, char** argv) {
+	errorInit();
 
 	test("config parser", configParser);
+	test("timer", timer);
 
 	return 0;
 }
